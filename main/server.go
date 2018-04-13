@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"log"
@@ -10,7 +9,6 @@ import (
 	"demo/pghandler"
 	"github.com/gorilla/mux"
 	"strconv"
-	"os"
 )
 
 type Name struct {
@@ -34,7 +32,7 @@ func usershandler(w http.ResponseWriter, r*http.Request) {
 			result := Users.UserInsert(username)
 			w.Write(result)
 		} else {
-			fmt.Println(err)
+			log.Fatal(err)
 		}
 	} else if r.Method == "GET" {
 		result := Users.GetAllUsers()
@@ -46,56 +44,41 @@ func usershandler(w http.ResponseWriter, r*http.Request) {
 	}
 }
 
-func findUid(str string) []string{
-	reg := regexp.MustCompile(`\d+`)
-	result := reg.FindAllString(str, -1)
-	return result
-}
-
 func getAllRelsHandler(w http.ResponseWriter, r*http.Request) {
+	uid_str := mux.Vars(r)["user_id"]
 	var Rel pghandler.Relationships
-	log.Println(r.URL.Path)
-	uid_req := findUid(r.URL.Path)
-	if uid_req != nil{
-		uid_str := uid_req[0]
-		uid, err := strconv.Atoi(uid_str)
-		if err != nil {
-			log.Println(err)
-			os.Exit(2)
-		}
+	uid, err := strconv.Atoi(uid_str)
+	if err != nil {
+		log.Fatal(err)
+		info := "500:Uid is not number"
+		errInfo := []byte(info)
+		w.Write(errInfo)
+	} else {
 		result := Rel.GetALLRelationships(uid)
 		w.Write(result)
-	} else {
-		info := "uid's format is wrong!"
-		err := []byte(info)
-		w.Write(err)
 	}
 }
 
 func newRelHandler(w http.ResponseWriter, r*http.Request) {
 	var Rel pghandler.Relationships
-	uid_req := findUid(r.URL.Path)
-	var uid int
-	var user_id int
-	if uid_req != nil{
-		uid_str, user_id_str := uid_req[0], uid_req[1]
-		var err error
-		uid, err = strconv.Atoi(uid_str)
-		if err != nil {
-			log.Println(err)
-			os.Exit(2)
-		}
-		user_id, err = strconv.Atoi(user_id_str)
-		if err != nil {
-			log.Println(err)
-			os.Exit(2)
-		}
-	} else {
-		info := "uid's format is wrong!"
-		err := []byte(info)
-		log.Println(err)
-		w.Write(err)
+	uid_str := mux.Vars(r)["user_id"]
+	user_id_str := mux.Vars(r)["other_user_id"]
+
+	uid, err := strconv.Atoi(uid_str)
+	if err != nil {
+		log.Fatal(err)
+		info := "500:Uid is not number"
+		errInfo := []byte(info)
+		w.Write(errInfo)
 	}
+	user_id, err := strconv.Atoi(user_id_str)
+	if err != nil {
+		log.Fatal(err)
+		info := "500:Uid is not number"
+		errInfo := []byte(info)
+		w.Write(errInfo)
+	}
+	
 	body, _ := ioutil.ReadAll(r.Body)
 	body_str := string(body)
 	log.Println(body_str)
