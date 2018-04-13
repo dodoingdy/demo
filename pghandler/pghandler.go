@@ -6,6 +6,7 @@ import (
 	_ "github.com/bmizerany/pq"
 	"encoding/json"
 	"strconv"
+	"log"
 )
 
 var db *sql.DB
@@ -32,6 +33,7 @@ type Relationship struct {
 
 func CheckErr(err error) {
 	if err != nil {
+		log.Println(err)
 		panic(err)
 	}
 }
@@ -46,7 +48,7 @@ func SqlClose(){
 	db.Close()
 }
 
-func UserInsert(username string) []byte{
+func(result Users) UserInsert(username string) []byte{
 	stmt, err := db.Prepare("INSERT INTO users(username) VALUES($1)")
 	CheckErr(err)
 
@@ -56,9 +58,7 @@ func UserInsert(username string) []byte{
 	affect, err := res.RowsAffected()
 	CheckErr(err)
 
-	fmt.Println("rows affected:", affect)
-
-	var result Users
+	log.Println("rows affected:", affect)
 
 	new_id, err := db.Query("select currval('uid_seq')")
 	for new_id.Next() {
@@ -71,11 +71,9 @@ func UserInsert(username string) []byte{
 	return bytes
 }
 
-func GetAllUsers() []byte {
+func(result Users) GetAllUsers() []byte {
 	rows, err := db.Query("select * from users")
 	CheckErr(err)
-
-	var result Users
 
 	for rows.Next() {
 		var uid int
@@ -84,20 +82,17 @@ func GetAllUsers() []byte {
 		err = rows.Scan(&uid, &username, &utype)
 		CheckErr(err)
 		result.Users = append(result.Users, User{Uid:uid, Username:username, Utype:utype})
-		fmt.Println("uid = ", uid, "username = ", username, "type = ", utype)
+		log.Println("uid = ", uid, "username = ", username, "type = ", utype)
 	}
 	bytes, _ := json.Marshal(result)
-	fmt.Println(bytes)
 	return bytes
 }
 
-func GetALLRelationships(uid int) []byte {
+func(result Relationships) GetALLRelationships(uid int) []byte {
 	sql := "select userid,state,type from relationships where uid=" + strconv.Itoa(uid)
-	fmt.Println(sql)
+	log.Println(sql)
 	rows, err := db.Query(sql)
 	CheckErr(err)
-
-	var result Relationships
 
 	for rows.Next() {
 		var userid int
@@ -106,25 +101,23 @@ func GetALLRelationships(uid int) []byte {
 		err := rows.Scan(&userid, &state, &rtype)
 		CheckErr(err)
 		result.Relationships = append(result.Relationships, Relationship{Userid:userid, State:state, Rtype:rtype})
-		fmt.Println("userid = ", userid, "state = ", state, "type = ", rtype)
+		log.Println("userid = ", userid, "state = ", state, "type = ", rtype)
 	}
 	bytes, _ := json.Marshal(result)
-	fmt.Println(string(bytes[:]))
+	//fmt.Println(string(bytes[:]))
 	return bytes
 }
 
-func NewRelationship(uid int, user_id int, state string, rtype string) []byte{
+func(result Relationships) NewRelationship(uid int, user_id int, state string, rtype string) []byte{
 	stmt, err := db.Prepare("INSERT INTO relationships(uid,userid,state,type) VALUES($1,$2,$3,$4)")
 	CheckErr(err)
 
 	sql := "select state from relationships where uid=" + strconv.Itoa(user_id) + " and userid=" + strconv.Itoa(uid)
 
-	var result Relationships
-
 	if state == "liked" {
 		row, err := db.Query(sql)
 		CheckErr(err)
-		fmt.Println(row)
+		log.Println(row)
 
 		var oldstate string
 		key := 0
@@ -152,7 +145,7 @@ func NewRelationship(uid int, user_id int, state string, rtype string) []byte{
 				affect, err = res.RowsAffected()
 				CheckErr(err)
 	
-				fmt.Println("rows affected:", affect)
+				log.Println("rows affected:", affect)
 				result.Relationships = append(result.Relationships, Relationship{Userid:user_id, State:"matched", Rtype:rtype})
 			}
 		}
@@ -163,20 +156,46 @@ func NewRelationship(uid int, user_id int, state string, rtype string) []byte{
 			affect, err := res.RowsAffected()
 			CheckErr(err)
 	
-			fmt.Println("rows affected:", affect)
+			log.Println("rows affected:", affect)
 			result.Relationships = append(result.Relationships, Relationship{Userid:user_id, State:state, Rtype:rtype})
 		}
 	} else {
-		res, err := stmt.Exec(uid, user_id, state, rtype)
+		var oldstate string
+		err := db.QueryRow(sql).Scan(&oldstate)
 		CheckErr(err)
 
-		affect, err := res.RowsAffected()
-		CheckErr(err)
+		if oldstate == "matched"{
+			upstmt, err := db.Prepare("update relationships set state=$1 where uid=$2 and userid=$3")
+			CheckErr(err)
+
+			res, err := upstmt.Exec("liked", user_id, uid)
+			CheckErr(err)
+
+			affect, err := res.RowsAffected()
+			CheckErr(err)
+									
+			fmt.Println("rows affected:", affect)
+
+			res, err = upstmt.Exec(state, uid, user_id)
+			CheckErr(err)
+
+			affect, err = res.RowsAffected()
+			CheckErr(err)
 	
-		fmt.Println("rows affected:", affect)
-		result.Relationships = append(result.Relationships, Relationship{Userid:user_id, State:state, Rtype:rtype})
+			log.Println("rows affected:", affect)
+			result.Relationships = append(result.Relationships, Relationship{Userid:user_id, State:state, Rtype:rtype})
+		} else {
+			res, err := stmt.Exec(uid, user_id, state, rtype)
+			CheckErr(err)
+
+			affect, err := res.RowsAffected()
+			CheckErr(err)
+	
+			log.Println("rows affected:", affect)
+			result.Relationships = append(result.Relationships, Relationship{Userid:user_id, State:state, Rtype:rtype})
+		}
 	}
 	bytes, _ := json.Marshal(result)
-	fmt.Println(string(bytes[:]))
+	log.Println(string(bytes[:]))
 	return bytes
 }
