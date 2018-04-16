@@ -23,8 +23,8 @@ func usershandler(w http.ResponseWriter, r*http.Request) {
 	var Users pghandler.Users
 	if r.Method == "POST" {
 		body, _ := ioutil.ReadAll(r.Body)
-		body_str := string(body)
-		log.Println(body_str)
+		bodyStr := string(body)
+		log.Println(bodyStr)
 		var username Name
 		if err := json.Unmarshal(body, &username); err == nil {
 			username := username.Name
@@ -45,12 +45,12 @@ func usershandler(w http.ResponseWriter, r*http.Request) {
 }
 
 func getAllRelsHandler(w http.ResponseWriter, r*http.Request) {
-	uid_str := mux.Vars(r)["user_id"]
+	uidStr := mux.Vars(r)["user_id"]
 	var Rel pghandler.Relationships
-	uid, err := strconv.Atoi(uid_str)
+	uid, err := strconv.Atoi(uidStr)
 	if err != nil {
 		log.Fatal(err)
-		info := "500:Uid is not number"
+		info := "ERROR:Uid is not number"
 		errInfo := []byte(info)
 		w.Write(errInfo)
 	} else {
@@ -61,32 +61,32 @@ func getAllRelsHandler(w http.ResponseWriter, r*http.Request) {
 
 func newRelHandler(w http.ResponseWriter, r*http.Request) {
 	var Rel pghandler.Relationships
-	uid_str := mux.Vars(r)["user_id"]
-	user_id_str := mux.Vars(r)["other_user_id"]
+	uidStr := mux.Vars(r)["user_id"]
+	userIdStr := mux.Vars(r)["other_user_id"]
 
-	uid, err := strconv.Atoi(uid_str)
+	uid, err := strconv.Atoi(uidStr)
 	if err != nil {
 		log.Fatal(err)
-		info := "500:Uid is not number"
+		info := "ERROR:Uid is not number"
 		errInfo := []byte(info)
 		w.Write(errInfo)
 	}
-	user_id, err := strconv.Atoi(user_id_str)
+	userId, err := strconv.Atoi(userIdStr)
 	if err != nil {
 		log.Fatal(err)
-		info := "500:Uid is not number"
+		info := "ERROR:Uid is not number"
 		errInfo := []byte(info)
 		w.Write(errInfo)
 	}
 	
 	body, _ := ioutil.ReadAll(r.Body)
-	body_str := string(body)
-	log.Println(body_str)
+	bodyStr := string(body)
+	log.Println(bodyStr)
 	var state State
 	if err := json.Unmarshal(body, &state); err == nil {
 		state := state.State
-		log.Println(uid, user_id, state)
-		result := Rel.NewRelationship(uid, user_id, state, "relationship")
+		log.Println(uid, userId, state)
+		result := Rel.NewRelationship(uid, userId, state, "relationship")
 		w.Write(result)
 	} else {
 		log.Println(err)

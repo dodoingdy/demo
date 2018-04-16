@@ -60,10 +60,10 @@ func(result Users) UserInsert(username string) []byte{
 
 	log.Println("rows affected:", affect)
 
-	new_id, err := db.Query("select currval('uid_seq')")
-	for new_id.Next() {
+	newId, err := db.Query("select currval('uid_seq')")
+	for newId.Next() {
 		var uid int
-		err = new_id.Scan(&uid)
+		err = newId.Scan(&uid)
 		CheckErr(err)
 		result.Users = append(result.Users, User{Uid:uid, Username:username, Utype:"user"})
 	}
@@ -108,11 +108,11 @@ func(result Relationships) GetALLRelationships(uid int) []byte {
 	return bytes
 }
 
-func(result Relationships) NewRelationship(uid int, user_id int, state string, rtype string) []byte{
+func(result Relationships) NewRelationship(uid int, userId int, state string, rtype string) []byte{
 	stmt, err := db.Prepare("INSERT INTO relationships(uid,userid,state,type) VALUES($1,$2,$3,$4)")
 	CheckErr(err)
 
-	sql := "select state from relationships where uid=" + strconv.Itoa(user_id) + " and userid=" + strconv.Itoa(uid)
+	sql := "select state from relationships where uid=" + strconv.Itoa(userId) + " and userid=" + strconv.Itoa(uid)
 
 	if state == "liked" {
 		row, err := db.Query(sql)
@@ -131,7 +131,7 @@ func(result Relationships) NewRelationship(uid int, user_id int, state string, r
 				upstmt, err := db.Prepare("update relationships set state=$1 where uid=$2 and userid=$3")
 				CheckErr(err)
 
-				res, err := upstmt.Exec("matched", user_id, uid)
+				res, err := upstmt.Exec("matched", userId, uid)
 				CheckErr(err)
 
 				affect, err := res.RowsAffected()
@@ -139,25 +139,25 @@ func(result Relationships) NewRelationship(uid int, user_id int, state string, r
 									
 				fmt.Println("rows affected:", affect)
 
-				res, err = stmt.Exec(uid, user_id, "matched", rtype)
+				res, err = stmt.Exec(uid, userId, "matched", rtype)
 				CheckErr(err)
 
 				affect, err = res.RowsAffected()
 				CheckErr(err)
 	
 				log.Println("rows affected:", affect)
-				result.Relationships = append(result.Relationships, Relationship{Userid:user_id, State:"matched", Rtype:rtype})
+				result.Relationships = append(result.Relationships, Relationship{Userid:userId, State:"matched", Rtype:rtype})
 			}
 		}
 		if key == 0 {
-			res, err := stmt.Exec(uid, user_id, state, rtype)
+			res, err := stmt.Exec(uid, userId, state, rtype)
 			CheckErr(err)
 
 			affect, err := res.RowsAffected()
 			CheckErr(err)
 	
 			log.Println("rows affected:", affect)
-			result.Relationships = append(result.Relationships, Relationship{Userid:user_id, State:state, Rtype:rtype})
+			result.Relationships = append(result.Relationships, Relationship{Userid:userId, State:state, Rtype:rtype})
 		}
 	} else {
 		var oldstate string
@@ -168,7 +168,7 @@ func(result Relationships) NewRelationship(uid int, user_id int, state string, r
 			upstmt, err := db.Prepare("update relationships set state=$1 where uid=$2 and userid=$3")
 			CheckErr(err)
 
-			res, err := upstmt.Exec("liked", user_id, uid)
+			res, err := upstmt.Exec("liked", userId, uid)
 			CheckErr(err)
 
 			affect, err := res.RowsAffected()
@@ -176,23 +176,23 @@ func(result Relationships) NewRelationship(uid int, user_id int, state string, r
 									
 			fmt.Println("rows affected:", affect)
 
-			res, err = upstmt.Exec(state, uid, user_id)
+			res, err = upstmt.Exec(state, uid, userId)
 			CheckErr(err)
 
 			affect, err = res.RowsAffected()
 			CheckErr(err)
 	
 			log.Println("rows affected:", affect)
-			result.Relationships = append(result.Relationships, Relationship{Userid:user_id, State:state, Rtype:rtype})
+			result.Relationships = append(result.Relationships, Relationship{Userid:userId, State:state, Rtype:rtype})
 		} else {
-			res, err := stmt.Exec(uid, user_id, state, rtype)
+			res, err := stmt.Exec(uid, userId, state, rtype)
 			CheckErr(err)
 
 			affect, err := res.RowsAffected()
 			CheckErr(err)
 	
 			log.Println("rows affected:", affect)
-			result.Relationships = append(result.Relationships, Relationship{Userid:user_id, State:state, Rtype:rtype})
+			result.Relationships = append(result.Relationships, Relationship{Userid:userId, State:state, Rtype:rtype})
 		}
 	}
 	bytes, _ := json.Marshal(result)
