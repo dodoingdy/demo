@@ -5,8 +5,7 @@ import (
 	"net/http"
 	"log"
 	"encoding/json"
-	"regexp"
-	"demo/pghandler"
+	"github.com/dodoingdy/demo/pghandler"
 	"github.com/gorilla/mux"
 	"strconv"
 )
@@ -94,14 +93,20 @@ func newRelHandler(w http.ResponseWriter, r*http.Request) {
 }
 
 func main() {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Println("Runtime error caught: %v", r)
+		}
+	}()
 	pghandler.SqlOpen()
+	defer pghandler.SqlClose()
 	r := mux.NewRouter()
-	r.HandleFunc("/users", usershandler).Methods("GET", "POST")
+	r.HandleFunc("/users", usershandler).Methods("GET")
+	r.HandleFunc("/users", usershandler).Methods("POST")
 	r.HandleFunc("/users/{user_id}/relationships", getAllRelsHandler).Methods("GET")
 	r.HandleFunc("/users/{user_id}/relationships/{other_user_id}", newRelHandler).Methods("PUT")
 	http.Handle("/", r)
 	if err := http.ListenAndServe("0.0.0.0:8080", nil); err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
-	defer pghandler.SqlClose()
 }
